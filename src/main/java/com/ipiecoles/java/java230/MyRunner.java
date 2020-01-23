@@ -54,7 +54,6 @@ public class MyRunner implements CommandLineRunner {
     public void run(String... strings) throws Exception {
         String fileName = "employes.csv";
         readFile(fileName);
-        //readFile(strings[0]);
     }
 
     /**
@@ -87,101 +86,77 @@ public class MyRunner implements CommandLineRunner {
     private void processLine(String ligne) throws BatchException {
         //TODO
     		
-    	// Type d'employé, à vérifier en 1er
-        if(!ligne.matches(REGEX_TYPE)) {
-    		throw new BatchException("Type d'employé inconnu : " + ligne.charAt(0));
-    	}
-        
         // Transformer String en tableau
     	String [] tableau= ligne.split(",");
     	
     	// Test taille tableau pour pouvoir continuer, vérifier si tableau est vide
     	if (tableau.length > 0) {	   	
 
-    	// Test taille ligne, le bon nombre   	  	   		
-    		if(!tableau[0].matches(REGEX_MATRICULE)) {
-        		throw new BatchException("La chaîne " + tableau[0] + " ne respecte pas l'expression régulière ^[MTC][0-9]{5}$ =>  " + ligne.charAt(0));
-        	}
     		// Récupération de la 1ère lettre du matricule
     		String m1 = tableau[0].substring(0, 1).toUpperCase();
     		
-    		// Si matricule manager
-	    	if ("M".equals(m1) && tableau.length != NB_CHAMPS_MANAGER) {
-	    		throw new BatchException("La ligne manager ne contient pas 5 éléments mais " + tableau.length + " " + ligne.charAt(0));
-	    	}
+    		// Type d'employé  	  	   		
+    		if(!tableau[0].matches(REGEX_TYPE)) {
+    		    throw new BatchException("Type d'employé inconnu : " + m1);
+        	}
+    		
+    		// Test taille ligne, le bon nombre   	  	   		
+    		if(!tableau[0].matches(REGEX_MATRICULE)) {
+        		throw new BatchException("La chaîne " + tableau[0] + " ne respecte pas l'expression régulière ^[MTC][0-9]{5}$ =>  " + ligne.charAt(0));
+        	}
+    		
+    		// On redirige en fonction de la 1ère lettre du matricule
+    		switch(m1) {
+    			case "T":
+    				processTechnicien(ligne);
+    		    break;
+    		  case "M":
+    			  	processManager(ligne);
+    		    break;
+    		  case "C":
+    			  	processCommercial(ligne);
+    		    break;
+    		} 
+ 
+	    }
 	    	
-	    	// Date format
-	    	String date =  tableau[3];  
-	        try {
-	        	DateTimeFormat.forPattern("dd/MM/yyyy").parseLocalDate(date);     	
-	        } catch (Exception e) {
-	        	throw new BatchException(date + " ne respecte pas le format de date dd/MM/yyyy ");
-	        } 
-	    	
-	        // Champ salaire 
-	        String salaire = tableau[4];
-	        try {
-	        	Double salaireNum = Double.parseDouble(salaire);
-	        } catch (Exception e) {
-	        	throw new BatchException(salaire + " n'est pas un nombre valide pour un salaire ");
-	        } 
-	        // Si matricule commercial
-	    	if ("C".equals(m1) && tableau.length != NB_CHAMPS_COMMERCIAL) {
-	    		throw new BatchException("La ligne commercial ne contient pas 7 éléments mais " + tableau.length + " " + ligne.charAt(0));
-	    	}
-	    	if ("C".equals(m1) && tableau.length == NB_CHAMPS_COMMERCIAL) {
-	    		processCommercial(ligne);
-	    		// Le chiffre d'affaire du commercial
-	    		String ca = tableau[5];
-	    		try {
-	    			Double caNum = Double.parseDouble(ca);
-		        } catch (Exception e) {
-		        	throw new BatchException("Le chiffre d'affaire du commercial est incorrect : " + ca + " ");
-		        } 
-		        // La performance du commercial
-	    		String perf = tableau[6];
-	    		try {
-		    		Double perfNum = Double.parseDouble(perf);
-		        } catch (Exception e) {
-		        	throw new BatchException("La performance du commercial est incorrecte : " + perf + " ");
-		        } 
-	    	}
-	    	// Si matricule technicien
-	    	if ("T".equals(m1) && tableau.length != NB_CHAMPS_TECHNICIEN) {
-	    		throw new BatchException("La ligne technicien ne contient pas 7 éléments mais " + tableau.length + " " + ligne.charAt(0));
-	    	}
-	    	if ("T".equals(m1) && tableau.length == NB_CHAMPS_TECHNICIEN) {
-	    		processTechnicien(ligne);
-	    		String grade = tableau[5];
-		    	try {
-		    		Integer.parseInt(grade); 
-		    		
-		        } catch (Exception e) {
-		        	throw new BatchException("Le grade du technicien est incorrect : " + grade);
-		        }    	
-		    	if (!grade.matches("[1-5]")) {	
-		    		//Employe tech = employeRepository.find
-		    		// System.out.println("-------------- test = " + t.toString());
-	        		throw new BatchException("Le grade doit être compris entre 1 et 5 : " + grade + ", technicien : Technicien{grade=" + tableau[5] + "} "
-	        				+ "Employe{nom='" + tableau[1] + "', prenom='" + tableau[2] + "', matricule='" + tableau[0] + "', dateEmbauche= " + tableau[3] + ", salaire=" + tableau[4] + "} ");
-		    	}	    	
-		    	if (!tableau[6].matches(REGEX_MATRICULE_MANAGER)) {
-		    		processManager(ligne);
-		    		throw new BatchException("la chaîne " + tableau[6] + " ne respecte pas l'expression régulière ^M[0-9]{5}$ " + ligne.charAt(0));
-		    	}
-		    	try {
-		    		Employe tech = employeRepository.findByMatricule(tableau[6]);
-		    		System.out.println("test : " + tech.toString());
-		        } catch (Exception e) {
-		        	throw new BatchException("Le manager de matricule " + tableau[6] + " n'a pas été trouvé dans le fichier ou en base de données");
-		        }  
-	    	}
-	    	
-    	}
-    	
-    	
     }
+    	
+    	
+    
+    
+    /**
+	 * Vérifie le format de la date
+	 * @param date
+	 * @throws BatchException si la date n'est pas conforme
+	 * @return date
+	 */
+	private String verifDate(String date) throws BatchException {
+		try {
+        	DateTimeFormat.forPattern("dd/MM/yyyy").parseLocalDate(date);     	
+        } catch (Exception e) {
+        	throw new BatchException(date + " ne respecte pas le format de date dd/MM/yyyy ");
+        }
+		return date; 
+	}
 
+	/**
+	 * Vérifie le salaire
+	 * @param salaire
+	 * @throws BatchException si le salaire n'est pas conforme
+	 * @return salaire
+	 */
+	private String verifSalaire(String salaire) throws BatchException {
+		try {
+	    	Double.parseDouble(salaire);
+	    } catch (Exception e) {
+	    	throw new BatchException(salaire + " n'est pas un nombre valide pour un salaire ");
+	    } 
+		return salaire; 
+	}
+    
+    
+    
     /**
      * Méthode qui crée un Commercial à partir d'une ligne contenant les informations d'un commercial et l'ajoute dans la liste globale des employés
      * @param ligneCommercial la ligne contenant les infos du commercial à intégrer
@@ -192,16 +167,43 @@ public class MyRunner implements CommandLineRunner {
     	String [] tableau= ligneCommercial.split(",");   	   	
     	
     	Commercial c = new Commercial();
-    	/*
-    	String date =  tableau[3];   	
-        try {
-        	c.setDateEmbauche(DateTimeFormat.forPattern("dd/MM/yyyy").parseLocalDate(date));     	
-        } catch (Exception e) {
-        	throw new BatchException(date + " ne respecte pas le format de date dd/MM/yyyy ");
-        }
-        */
+		
+    	// Récupération de la valeur de la date
+		String date =  tableau[3];
+		verifDate(date);
+		
+		// Champ salaire 
+	    String salaire = tableau[4];
+	    verifSalaire(salaire);
+	    
+	    // Récupération de la 1ère lettre du matricule
+		String m1 = tableau[0].substring(0, 1).toUpperCase();
+		
+		// Longueur tableau
+    	if (tableau.length != NB_CHAMPS_COMMERCIAL) {
+    		throw new BatchException("La ligne commercial ne contient pas 7 éléments mais " + tableau.length + " ");
+    	}
+    	if (tableau.length == NB_CHAMPS_COMMERCIAL) {
+    		
+    		// Le chiffre d'affaire du commercial
+    		String ca = tableau[5];
+    		try {
+    			Double.parseDouble(ca);
+	        } catch (Exception e) {
+	        	throw new BatchException("Le chiffre d'affaire du commercial est incorrect : " + ca + " ");
+	        } 
+    		
+	        // La performance du commercial
+    		String perf = tableau[6];
+    		try {
+	    		Double.parseDouble(perf);
+	        } catch (Exception e) {
+	        	throw new BatchException("La performance du commercial est incorrecte : " + perf + " ");
+	        } 
+    	}
     }
 
+    
     /**
      * Méthode qui crée un Manager à partir d'une ligne contenant les informations d'un manager et l'ajoute dans la liste globale des employés
      * @param ligneManager la ligne contenant les infos du manager à intégrer
@@ -213,10 +215,21 @@ public class MyRunner implements CommandLineRunner {
         
     	Manager m = new Manager();
     	
+    	// Si bonne longueur de tableau
+    	if (tableau.length != NB_CHAMPS_MANAGER) {
+    		throw new BatchException("La ligne manager ne contient pas 5 éléments mais " + tableau.length + " ");
+    	}
     	
+    	// Récupération de la valeur de la date
+		String date =  tableau[3];
+		verifDate(date);
     	
-    	
-    	
+		// Champ salaire 
+	    String salaire = tableau[4];
+	    verifSalaire(salaire);
+	    
+	    
+
     }
 
     /**
@@ -229,6 +242,51 @@ public class MyRunner implements CommandLineRunner {
     	String [] tableau= ligneTechnicien.split(",");   	   	  	
         
     	Technicien t = new Technicien();
+    	
+    	// Récupération de la valeur de la date
+		String date =  tableau[3];
+		verifDate(date);
+		
+		// Champ salaire 
+	    String salaire = tableau[4];
+	    verifSalaire(salaire);
+	 	
+	 	// Si matricule technicien
+    	if (tableau.length != NB_CHAMPS_TECHNICIEN) {
+    		throw new BatchException("La ligne technicien ne contient pas 7 éléments mais " + tableau.length + " ");
+    	}
+    	if (tableau.length == NB_CHAMPS_TECHNICIEN) {
+    		String grade = tableau[5];
+	    	try {
+	    		Integer.parseInt(grade); 
+	    		
+	        } catch (Exception e) {
+	        	throw new BatchException("Le grade du technicien est incorrect : " + grade);
+	        } 
+	    	if (!grade.matches("[1-5]")) {	
+	    		throw new BatchException("Le grade doit être compris entre 1 et 5 : " + grade + ", technicien : Technicien{grade=" + tableau[5] + "} "
+	    				+ "Employe{nom='" + tableau[1] + "', prenom='" + tableau[2] + "', matricule='" + tableau[0] + "', dateEmbauche= " + tableau[3] + ", salaire=" + tableau[4] + "} ");
+	    	}
+	    	
+	    	// Vérification du matricule du manager du technicien
+	    	if (!tableau[6].matches(REGEX_MATRICULE_MANAGER)) {
+	    		throw new BatchException("la chaîne " + tableau[6] + " ne respecte pas l'expression régulière ^M[0-9]{5}$ ");
+	    	}
+	    	
+	    			
+	    	// recherche du matricule du manager du technicien
+    		Employe tech = employeRepository.findByMatricule(tableau[6]);
+    		boolean matcsv = tableau[0].matches(tableau[6]);
+    	
+    		//System.out.println("--------------------- tech = " + tech + " / matcsv = " + matcsv);
+
+    		if(tech == null && !matcsv) {
+    			throw new BatchException("Le manager de matricule " + tableau[6] + " n'a pas été trouvé dans le fichier ou en base de données");
+    		} 
+    	}
+
     }
+
+    
 
 }
