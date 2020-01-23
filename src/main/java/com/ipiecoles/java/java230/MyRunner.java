@@ -102,7 +102,7 @@ public class MyRunner implements CommandLineRunner {
     		
     		// Test taille ligne, le bon nombre   	  	   		
     		if(!tableau[0].matches(REGEX_MATRICULE)) {
-        		throw new BatchException("La chaîne " + tableau[0] + " ne respecte pas l'expression régulière ^[MTC][0-9]{5}$ =>  " + ligne.charAt(0));
+        		throw new BatchException("La chaîne " + tableau[0] + " ne respecte pas l'expression régulière ^[MTC][0-9]{5}$ ");
         	}
     		
     		// On redirige en fonction de la 1ère lettre du matricule
